@@ -4,7 +4,8 @@
   "private": true,
   "description": "Monorepo wrapper to satisfy CI on Render; actual app is in react_fullstack/server",
   "scripts": {
-    "postinstall": "echo 'Root postinstall - nothing to do'"
+    "postinstall": "echo 'Root postinstall - nothing to do'",
+    "start": "cd react_fullstack/server && npm start"
   },
   "engines": {
     "node": ">=16"
