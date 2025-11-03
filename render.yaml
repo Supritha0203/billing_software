@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: billing-server
+    env: node
+    plan: free
+    repo: https://github.com/Supritha0203/billing_software
+    branch: main
+    # Ensure Render runs install in the server folder where package-lock.json (if present)
+    buildCommand: cd react_fullstack/server && npm install
+    startCommand: cd react_fullstack/server && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Optionally set TEMPLATE_PATH and FONT_PATH here
+      # - key: TEMPLATE_PATH
+      #   value: /full/path/to/invoice_template.png
+      # - key: FONT_PATH
+      #   value: /full/path/to/calibri-bold-italic.ttf
