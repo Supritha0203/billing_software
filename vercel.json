@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "buildCommand": "cd react_fullstack/client && npm install && npm run build",
+  "outputDirectory": "react_fullstack/client/dist",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/react_fullstack/server/server.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+

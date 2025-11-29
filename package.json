@@ -2,10 +2,18 @@
   "name": "billing_software",
   "version": "1.0.0",
   "private": true,
-  "description": "Monorepo wrapper to satisfy CI on Render; actual app is in react_fullstack/server",
+  "description": "Siddivinayaka Jewellery Billing Software",
   "scripts": {
-    "postinstall": "echo 'Root postinstall - nothing to do'",
-    "start": "cd react_fullstack/server && npm start"
+    "install:all": "cd react_fullstack/client && npm install && cd ../server && npm install",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd react_fullstack/server && npm run dev",
+    "dev:client": "cd react_fullstack/client && npm run dev",
+    "build": "cd react_fullstack/client && npm run build",
+    "start": "cd react_fullstack/server && npm start",
+    "postinstall": "echo 'Root postinstall - nothing to do'"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   },
   "engines": {
     "node": ">=16"
