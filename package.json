@@ -4,12 +4,10 @@
   "private": true,
   "description": "Siddivinayaka Jewellery Billing Software",
   "scripts": {
-    "install:all": "cd react_fullstack/client && npm install && cd ../server && npm install",
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "dev:server": "cd react_fullstack/server && npm run dev",
-    "dev:client": "cd react_fullstack/client && npm run dev",
+    "install:client": "cd react_fullstack/client && npm install",
+    "dev": "cd react_fullstack/client && npm run dev",
     "build": "cd react_fullstack/client && npm run build",
-    "start": "cd react_fullstack/server && npm start",
+    "preview": "cd react_fullstack/client && npm run preview",
     "postinstall": "echo 'Root postinstall - nothing to do'"
   },
   "devDependencies": {
