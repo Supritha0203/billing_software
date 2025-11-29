@@ -15,14 +15,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Paths to template - try multiple locations
-let templatePath = join(__dirname, '../../invoice_template.png');
-if (!fs.existsSync(templatePath)) {
-  templatePath = join(__dirname, '../public/invoice_template.png');
-}
-if (!fs.existsSync(templatePath)) {
-  templatePath = join(__dirname, '../invoice_template.png');
-}
+// Paths to template (from react_fullstack/api to root invoice_template.png)
+const templatePath = join(__dirname, '../../invoice_template.png');
 
 // Helper function to create SVG text overlay
 function createTextSVG(text, x, y, fontSize = 25, fontWeight = 'normal', color = '#000000', width = 800, height = 1200) {
@@ -46,6 +40,9 @@ app.post('/api/generate-invoice', async (req, res) => {
     } = req.body;
 
     // Load template image
+    if (!fs.existsSync(templatePath)) {
+      throw new Error(`Template not found at: ${templatePath}. Please ensure invoice_template.png is in the root directory.`);
+    }
     const templateBuffer = await fs.promises.readFile(templatePath);
     const image = sharp(templateBuffer);
     const metadata = await image.metadata();

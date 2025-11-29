@@ -5,7 +5,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/react_fullstack/server/server.js"
+      "destination": "/react_fullstack/api/index.js"
     },
     {
       "source": "/(.*)",
