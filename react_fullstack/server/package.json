@@ -1,0 +1,21 @@
+{
+  "name": "billing-server",
+  "version": "1.0.0",
+  "description": "Backend server for Siddivinayaka Jewellery billing software",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "sharp": "^0.33.0",
+    "pdfkit": "^0.14.0"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}
+
