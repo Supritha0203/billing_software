@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { generateInvoicePDF } from '../utils/invoiceGenerator'
+import { generateInvoicePDF } from '../utils/invoiceGenerator.js'
 import './InvoiceForm.css'
 
 function InvoiceForm() {
