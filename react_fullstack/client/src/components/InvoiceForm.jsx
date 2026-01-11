@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import axios from 'axios'
+import { generateInvoicePDF } from '../utils/invoiceGenerator'
 import './InvoiceForm.css'
 
 function InvoiceForm() {
@@ -127,12 +127,15 @@ function InvoiceForm() {
         totalAmount: totalAmount
       }
 
-      const response = await axios.post('/api/generate-invoice', invoiceData, {
-        responseType: 'blob'
-      })
+      // Load template image from public folder
+      const templateImageUrl = '/invoice_template.png'
+      console.log(templateImageUrl);
+      console.log("starting pdf generation");
+      // Generate PDF in browser
+      const pdfBlob = await generateInvoicePDF(invoiceData, templateImageUrl)
 
-      // Create download link for PDF
-      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
+      // Create download link
+      const url = window.URL.createObjectURL(pdfBlob)
       const link = document.createElement('a')
       link.href = url
       link.setAttribute('download', `invoice-${invoiceData.invoiceNumber}.pdf`)
@@ -144,7 +147,9 @@ function InvoiceForm() {
       alert('Invoice generated successfully!')
     } catch (error) {
       console.error('Error generating invoice:', error)
-      alert('Error generating invoice. Please try again.')
+      console.error('Error stack:', error.stack)
+      console.error('Error message:', error.message)
+      alert(`Error generating invoice: ${error.message || 'Unknown error'}. Check browser console for details.`)
     } finally {
       setIsGenerating(false)
     }
