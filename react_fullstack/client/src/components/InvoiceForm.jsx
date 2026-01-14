@@ -8,10 +8,13 @@ function InvoiceForm() {
     phoneNumber: '',
     goldRate: '',
     invoiceNumber: '',
+    discount: '',
+    amountPaid: '',
+    vaAsWeight: false
   })
 
   const [items, setItems] = useState([
-    { id: 1, name: '', grams: '', milligrams: '', amount: 0 }
+    { id: 1, name: '', mainWeight: '', vaPercent: '', makingCharges: '', stones: [], amount: 0 }
   ])
 
   const [isGenerating, setIsGenerating] = useState(false)
@@ -25,28 +28,50 @@ function InvoiceForm() {
     return `${day}/${month}/${year}`
   }
 
-  // Calculate amount for an item
-  const calculateItemAmount = (grams, milligrams, goldRate) => {
-    if (!grams || !goldRate) return 0
-    const totalGrams = parseFloat(grams) + (parseFloat(milligrams || 0) / 1000)
-    return totalGrams * parseFloat(goldRate)
+  const toNumber = (value) => {
+    if (value === '' || value === null || value === undefined) return 0
+    const n = Number(value)
+    return Number.isFinite(n) ? n : 0
   }
 
-  // Update item amount when grams, milligrams, or gold rate changes
-  const updateItemAmount = (itemId) => {
-    setItems(prevItems => 
-      prevItems.map(item => {
-        if (item.id === itemId) {
-          const amount = calculateItemAmount(item.grams, item.milligrams, formData.goldRate)
-          return { ...item, amount: parseFloat(amount.toFixed(2)) }
-        }
-        return item
-      })
+  const calculateStoneTotals = (stones = []) => {
+    return (stones || []).reduce(
+      (acc, stone) => ({
+        totalStoneWeight: acc.totalStoneWeight + toNumber(stone.weight),
+        totalStoneRate: acc.totalStoneRate + toNumber(stone.rate)
+      }),
+      { totalStoneWeight: 0, totalStoneRate: 0 }
     )
+  }
+
+  const calculateWeights = (mainWeight, stones, vaPercent) => {
+    const main = toNumber(mainWeight)
+    const { totalStoneWeight } = calculateStoneTotals(stones)
+    const va = toNumber(vaPercent)
+
+    const netWeight = Math.max(0, main - totalStoneWeight)
+    const grossWeight = netWeight * (1 + (va / 100))
+
+    return { netWeight, grossWeight }
+  }
+
+  // Calculate amount for an item (gross weight * gold rate)
+  const calculateItemAmount = (mainWeight, stones, vaPercent, makingCharges, goldRate) => {
+    if (!mainWeight || !goldRate) return 0
+    const { grossWeight } = calculateWeights(mainWeight, stones, vaPercent)
+    const { totalStoneRate } = calculateStoneTotals(stones)
+    const goldComponent = grossWeight * toNumber(goldRate)
+    const stoneComponent = totalStoneRate
+    const makingComponent = toNumber(makingCharges)
+    return goldComponent + stoneComponent + makingComponent
   }
 
   // Calculate total amount
   const totalAmount = items.reduce((sum, item) => sum + item.amount, 0)
+  const discountAmount = toNumber(formData.discount)
+  const netPayable = Math.max(0, totalAmount - discountAmount)
+  const amountPaid = toNumber(formData.amountPaid)
+  const amountDue = Math.max(0, netPayable - amountPaid)
 
   // Handle form input changes
   const handleInputChange = (e) => {
@@ -58,10 +83,22 @@ function InvoiceForm() {
       setItems(prevItems => 
         prevItems.map(item => ({
           ...item,
-          amount: calculateItemAmount(item.grams, item.milligrams, value)
+          amount: parseFloat(
+            calculateItemAmount(
+              item.mainWeight,
+              item.stones || [],
+              item.vaPercent,
+              item.makingCharges,
+              value
+            ).toFixed(2)
+          )
         }))
       )
     }
+  }
+
+  const handleVaToggle = (checked) => {
+    setFormData(prev => ({ ...prev, vaAsWeight: checked }))
   }
 
   // Handle item input changes
@@ -70,9 +107,15 @@ function InvoiceForm() {
       prevItems.map(item => {
         if (item.id === itemId) {
           const updatedItem = { ...item, [field]: value }
+          const mainForCalc = field === 'mainWeight' ? value : updatedItem.mainWeight
+          const stonesForCalc = updatedItem.stones || []
+          const vaForCalc = field === 'vaPercent' ? value : updatedItem.vaPercent
+          const makingForCalc = field === 'makingCharges' ? value : updatedItem.makingCharges
           const amount = calculateItemAmount(
-            field === 'grams' ? value : updatedItem.grams,
-            field === 'milligrams' ? value : updatedItem.milligrams,
+            mainForCalc,
+            stonesForCalc,
+            vaForCalc,
+            makingForCalc,
             formData.goldRate
           )
           return { ...updatedItem, amount: parseFloat(amount.toFixed(2)) }
@@ -85,7 +128,81 @@ function InvoiceForm() {
   // Add new item
   const addItem = () => {
     const newId = Math.max(...items.map(i => i.id), 0) + 1
-    setItems([...items, { id: newId, name: '', grams: '', milligrams: '', amount: 0 }])
+    setItems([
+      ...items,
+      { id: newId, name: '', mainWeight: '', vaPercent: '', makingCharges: '', stones: [], amount: 0 }
+    ])
+  }
+
+  const addStone = (itemId) => {
+    setItems(prevItems =>
+      prevItems.map(item => {
+        if (item.id !== itemId) return item
+        const newStone = {
+          id: Date.now() + Math.random(),
+          name: '',
+          weight: '',
+          rate: ''
+        }
+        const updatedStones = [...(item.stones || []), newStone]
+        const amount = calculateItemAmount(
+          item.mainWeight,
+          updatedStones,
+          item.vaPercent,
+          item.makingCharges,
+          formData.goldRate
+        )
+        return {
+          ...item,
+          stones: updatedStones,
+          amount: parseFloat(amount.toFixed(2))
+        }
+      })
+    )
+  }
+
+  const handleStoneChange = (itemId, stoneId, field, value) => {
+    setItems(prevItems =>
+      prevItems.map(item => {
+        if (item.id !== itemId) return item
+        const updatedStones = (item.stones || []).map(stone =>
+          stone.id === stoneId ? { ...stone, [field]: value } : stone
+        )
+        const amount = calculateItemAmount(
+          item.mainWeight,
+          updatedStones,
+          item.vaPercent,
+          item.makingCharges,
+          formData.goldRate
+        )
+        return {
+          ...item,
+          stones: updatedStones,
+          amount: parseFloat(amount.toFixed(2))
+        }
+      })
+    )
+  }
+
+  const removeStone = (itemId, stoneId) => {
+    setItems(prevItems =>
+      prevItems.map(item => {
+        if (item.id !== itemId) return item
+        const updatedStones = (item.stones || []).filter(stone => stone.id !== stoneId)
+        const amount = calculateItemAmount(
+          item.mainWeight,
+          updatedStones,
+          item.vaPercent,
+          item.makingCharges,
+          formData.goldRate
+        )
+        return {
+          ...item,
+          stones: updatedStones,
+          amount: parseFloat(amount.toFixed(2))
+        }
+      })
+    )
   }
 
   // Remove item
@@ -103,9 +220,9 @@ function InvoiceForm() {
       return
     }
 
-    const validItems = items.filter(item => item.name && item.grams)
+    const validItems = items.filter(item => item.name && item.mainWeight)
     if (validItems.length === 0) {
-      alert('Please add at least one item with name and grams')
+      alert('Please add at least one item with name and main weight')
       return
     }
 
@@ -118,13 +235,30 @@ function InvoiceForm() {
         customerName: formData.customerName,
         phoneNumber: formData.phoneNumber,
         goldRate: parseFloat(formData.goldRate),
+          vaAsWeight: !!formData.vaAsWeight,
         items: validItems.map(item => ({
           name: item.name,
-          grams: parseFloat(item.grams),
-          milligrams: parseFloat(item.milligrams || 0),
+          mainWeight: parseFloat(item.mainWeight),
+          vaPercent: parseFloat(item.vaPercent || 0),
+          makingCharges: parseFloat(item.makingCharges || 0),
+          stones: item.stones || [],
+          ...(() => {
+            const { totalStoneWeight, totalStoneRate } = calculateStoneTotals(item.stones || [])
+            const { netWeight, grossWeight } = calculateWeights(item.mainWeight, item.stones || [], item.vaPercent)
+            return {
+              totalStoneWeight,
+              totalStoneRate,
+              netWeight,
+              grossWeight
+            }
+          })(),
           amount: item.amount
         })),
-        totalAmount: totalAmount
+        totalAmount: totalAmount,
+        discount: toNumber(formData.discount),
+        netPayable: Math.max(0, totalAmount - toNumber(formData.discount)),
+        amountPaid: toNumber(formData.amountPaid),
+        amountDue: Math.max(0, Math.max(0, totalAmount - toNumber(formData.discount)) - toNumber(formData.amountPaid))
       }
 
       // Load template image from public folder
@@ -213,6 +347,15 @@ function InvoiceForm() {
               min="0"
               required
             />
+            <div className="va-toggle">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={!!formData.vaAsWeight}
+                  onChange={(e) => handleVaToggle(e.target.checked)}
+                /> Print V.A. as grams (instead of %)
+              </label>
+            </div>
           </div>
         </div>
       </div>
@@ -228,45 +371,123 @@ function InvoiceForm() {
           {items.map((item, index) => (
             <div key={item.id} className="item-row">
               <div className="item-number">{index + 1}</div>
-              <div className="item-fields">
-                <input
-                  type="text"
-                  placeholder="Item name"
-                  value={item.name}
-                  onChange={(e) => handleItemChange(item.id, 'name', e.target.value)}
-                  className="item-name"
-                />
-                <input
-                  type="number"
-                  placeholder="Grams"
-                  value={item.grams}
-                  onChange={(e) => handleItemChange(item.id, 'grams', e.target.value)}
-                  step="0.001"
-                  min="0"
-                  className="item-grams"
-                />
-                <input
-                  type="number"
-                  placeholder="Milligrams"
-                  value={item.milligrams}
-                  onChange={(e) => handleItemChange(item.id, 'milligrams', e.target.value)}
-                  step="1"
-                  min="0"
-                  max="999"
-                  className="item-milligrams"
-                />
-                <div className="item-amount">
-                  ₹{item.amount.toFixed(2)}
+              <div className="item-card">
+                <div className="item-topRow">
+                  <input
+                    type="text"
+                    placeholder="Item name"
+                    value={item.name}
+                    onChange={(e) => handleItemChange(item.id, 'name', e.target.value)}
+                    className="item-name"
+                  />
+                  <div className="item-amount">
+                    ₹{item.amount.toFixed(2)}
+                  </div>
+                  {items.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeItem(item.id)}
+                      className="btn-remove"
+                      aria-label="Remove item"
+                      title="Remove item"
+                    >
+                      ×
+                    </button>
+                  )}
                 </div>
-                {items.length > 1 && (
+
+                <div className="item-bottomRow">
+                  <input
+                    type="number"
+                    placeholder="Main wt (g)"
+                    value={item.mainWeight}
+                    onChange={(e) => handleItemChange(item.id, 'mainWeight', e.target.value)}
+                    step="0.001"
+                    min="0"
+                    className="item-mainWeight"
+                  />
+                  <input
+                    type="number"
+                    placeholder="V.A (%)"
+                    value={item.vaPercent}
+                    onChange={(e) => handleItemChange(item.id, 'vaPercent', e.target.value)}
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    className="item-vaPercent"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Making charges"
+                    value={item.makingCharges}
+                    onChange={(e) => handleItemChange(item.id, 'makingCharges', e.target.value)}
+                    step="0.01"
+                    min="0"
+                    className="item-makingCharges"
+                  />
+
+                  <div className="item-netWeight">
+                    Net {calculateWeights(item.mainWeight, item.stones || [], item.vaPercent).netWeight.toFixed(3)} g
+                  </div>
+                  <div className="item-grossWeight">
+                    Gross {calculateWeights(item.mainWeight, item.stones || [], item.vaPercent).grossWeight.toFixed(3)} g
+                  </div>
+
                   <button
                     type="button"
-                    onClick={() => removeItem(item.id)}
-                    className="btn-remove"
+                    className="btn-add-stone"
+                    onClick={() => addStone(item.id)}
                   >
-                    ×
+                    + Add stone
                   </button>
-                )}
+                </div>
+
+                <div className="stones-section">
+                  {(item.stones || []).length > 0 && (
+                    <div className="stones-header">
+                      <span>Stones</span>
+                    </div>
+                  )}
+                  <div className="stones-list">
+                    {(item.stones || []).map(stone => (
+                      <div key={stone.id} className="stone-row">
+                        <input
+                          type="text"
+                          placeholder="Stone name"
+                          value={stone.name}
+                          onChange={(e) => handleStoneChange(item.id, stone.id, 'name', e.target.value)}
+                          className="stone-name"
+                        />
+                        <input
+                          type="number"
+                          placeholder="Stone wt (g)"
+                          value={stone.weight}
+                          onChange={(e) => handleStoneChange(item.id, stone.id, 'weight', e.target.value)}
+                          step="0.001"
+                          min="0"
+                          className="stone-weight"
+                        />
+                        <input
+                          type="number"
+                          placeholder="Stone rate"
+                          value={stone.rate}
+                          onChange={(e) => handleStoneChange(item.id, stone.id, 'rate', e.target.value)}
+                          step="0.01"
+                          min="0"
+                          className="stone-rate"
+                        />
+                        <button
+                          type="button"
+                          className="btn-remove-stone"
+                          onClick={() => removeStone(item.id, stone.id)}
+                          aria-label="Remove stone"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           ))}
@@ -274,18 +495,54 @@ function InvoiceForm() {
       </div>
 
       <div className="form-section total-section">
-        <div className="total-amount">
-          <span className="total-label">Total Amount:</span>
-          <span className="total-value">₹{totalAmount.toFixed(2)}</span>
+        <div className="totals-grid">
+          <div className="total-box">
+            <span className="total-label">Total</span>
+            <span className="total-value">₹{totalAmount.toFixed(2)}</span>
+          </div>
+          <div className="total-box input-box">
+            <label>Discount</label>
+            <input
+              type="number"
+              name="discount"
+              value={formData.discount}
+              onChange={handleInputChange}
+              placeholder="Discount amount"
+              step="0.01"
+              min="0"
+            />
+          </div>
+          <div className="total-box">
+            <span className="total-label">Payable after discount</span>
+            <span className="total-value">₹{netPayable.toFixed(2)}</span>
+          </div>
+          <div className="total-box input-box">
+            <label>Paid</label>
+            <input
+              type="number"
+              name="amountPaid"
+              value={formData.amountPaid}
+              onChange={handleInputChange}
+              placeholder="Amount paid"
+              step="0.01"
+              min="0"
+            />
+          </div>
+          <div className="total-box due-box">
+            <span className="total-label">Amount Due</span>
+            <span className="total-value">₹{amountDue.toFixed(2)}</span>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={handleGenerateInvoice}
-          disabled={isGenerating}
-          className="btn-generate"
-        >
-          {isGenerating ? 'Generating...' : 'Generate Invoice'}
-        </button>
+        <div className="generate-row">
+          <button
+            type="button"
+            onClick={handleGenerateInvoice}
+            disabled={isGenerating}
+            className="btn-generate"
+          >
+            {isGenerating ? 'Generating...' : 'Generate Invoice'}
+          </button>
+        </div>
       </div>
     </div>
   )
