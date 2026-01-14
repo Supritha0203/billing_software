@@ -94,28 +94,53 @@ export async function generateInvoicePDF(invoiceData, templateImageUrl) {
 
   // Draw gold rate
   if (goldRate) {
-    ctx.font = 'bold 18px Arial, sans-serif';
+    ctx.font = 'normal 16px Arial, sans-serif';
     ctx.fillText(`₹${Number(goldRate).toFixed(2)}`, coordinates.goldRate.x, coordinates.goldRate.y);
   }
 
   // Draw items (handle dynamic lines per item including per-stone details)
-  ctx.font = 'bold 18px Arial, sans-serif';
-  const lineGap = 24;
+  const lineGap = 20;
+  const pageHeight = imgHeight;
+  const maxItemsPerPage = 3;
   let currentY = coordinates.itemStartY;
+  let pageIndex = 0;
+  let itemsOnCurrentPage = 0;
+  let canvases = [canvas];
+  let ctxArray = [ctx];
 
-  items.forEach((item) => {
+  items.forEach((item, itemIndex) => {
+    // Check if we need a new page
+    if (itemsOnCurrentPage >= maxItemsPerPage) {
+      // Create new canvas for new page
+      const newCanvas = document.createElement('canvas');
+      newCanvas.width = imgWidth;
+      newCanvas.height = imgHeight;
+      const newCtx = newCanvas.getContext('2d');
+      newCtx.drawImage(img, 0, 0);
+      newCtx.fillStyle = '#000000';
+      newCtx.textAlign = 'left';
+      newCtx.textBaseline = 'top';
+      canvases.push(newCanvas);
+      ctxArray.push(newCtx);
+      pageIndex++;
+      itemsOnCurrentPage = 0;
+      currentY = coordinates.itemStartY;
+    }
+
+    const currentCtx = ctxArray[pageIndex];
+    currentCtx.font = 'normal 16px Arial, sans-serif';
     const y = currentY;
 
     if (item.name) {
-      ctx.fillText(String(item.name), coordinates.itemNameX, y);
+      currentCtx.fillText(String(item.name), coordinates.itemNameX, y);
     }
 
     // Weight details: draw label in label column and numeric value in value column for alignment
-    let weightY = y + 4;
+    let weightY = y + 2;
 
     if (item.mainWeight !== undefined && item.mainWeight !== null && item.mainWeight !== '') {
-      ctx.fillText(`Main Wt:`, coordinates.weightLabelX, weightY);
-      ctx.fillText(`${Number(item.mainWeight).toFixed(3)}g`, coordinates.weightValueX, weightY);
+      currentCtx.fillText(`Main Wt:`, coordinates.weightLabelX, weightY);
+      currentCtx.fillText(`${Number(item.mainWeight).toFixed(3)}g`, coordinates.weightValueX, weightY);
       weightY += lineGap;
     }
 
@@ -124,85 +149,98 @@ export async function generateInvoicePDF(invoiceData, templateImageUrl) {
     let stoneLineY = weightY;
     stones.forEach((stone, sidx) => {
       const stoneName = stone.name || `Stone${sidx + 1}`;
-      ctx.fillText(String(stoneName), coordinates.itemNameX + 20, stoneLineY);
+      currentCtx.fillText(String(stoneName), coordinates.itemNameX + 20, stoneLineY);
       if (stone.weight !== undefined && stone.weight !== null && stone.weight !== '') {
-        ctx.fillText(`${Number(stone.weight).toFixed(3)}g`, coordinates.stoneWeightX, stoneLineY);
+        currentCtx.fillText(`${Number(stone.weight).toFixed(3)}g`, coordinates.stoneWeightX, stoneLineY);
       }
       if (stone.rate !== undefined && stone.rate !== null && stone.rate !== '') {
-        ctx.fillText(`₹${Number(stone.rate).toFixed(2)}`, coordinates.rateX, stoneLineY);
+        currentCtx.fillText(`₹${Number(stone.rate).toFixed(2)}`, coordinates.rateX, stoneLineY);
       }
       stoneLineY += lineGap;
     });
     weightY = stoneLineY;
 
     if (item.totalStoneWeight !== undefined && item.totalStoneWeight !== null && item.totalStoneWeight !== '') {
-      ctx.fillText(`Stone Total:`, coordinates.weightLabelX, weightY);
-      ctx.fillText(`${Number(item.totalStoneWeight).toFixed(3)}g`, coordinates.weightValueX, weightY);
+      currentCtx.fillText(`Stone Total:`, coordinates.weightLabelX, weightY);
+      currentCtx.fillText(`${Number(item.totalStoneWeight).toFixed(3)}g`, coordinates.weightValueX, weightY);
       weightY += lineGap;
     }
 
     if (item.netWeight !== undefined && item.netWeight !== null && item.netWeight !== '') {
-      ctx.fillText(`Net Wt:`, coordinates.weightLabelX, weightY);
-      ctx.fillText(`${Number(item.netWeight).toFixed(3)}g`, coordinates.weightValueX, weightY);
+      currentCtx.fillText(`Net Wt:`, coordinates.weightLabelX, weightY);
+      currentCtx.fillText(`${Number(item.netWeight).toFixed(3)}g`, coordinates.weightValueX, weightY);
       weightY += lineGap;
     }
 
     if (item.vaPercent !== undefined && item.vaPercent !== null && item.vaPercent !== '') {
-      ctx.fillText(`VA:`, coordinates.weightLabelX, weightY);
+      currentCtx.fillText(`VA:`, coordinates.weightLabelX, weightY);
       if (vaAsWeight) {
         const vaGrams = (Number(item.netWeight) * Number(item.vaPercent)) / 100;
-        ctx.fillText(`${Number(vaGrams).toFixed(3)}g`, coordinates.weightValueX, weightY);
+        currentCtx.fillText(`${Number(vaGrams).toFixed(3)}g`, coordinates.weightValueX, weightY);
       } else {
-        ctx.fillText(`${Number(item.vaPercent).toFixed(2)}%`, coordinates.weightValueX, weightY);
+        currentCtx.fillText(`${Number(item.vaPercent).toFixed(2)}%`, coordinates.weightValueX, weightY);
       }
       weightY += lineGap;
     }
 
     if (item.grossWeight !== undefined && item.grossWeight !== null && item.grossWeight !== '') {
-      ctx.fillText(`Gross Wt:`, coordinates.weightLabelX, weightY);
-      ctx.fillText(`${Number(item.grossWeight).toFixed(3)}g`, coordinates.weightValueX, weightY);
+      currentCtx.fillText(`Gross Wt:`, coordinates.weightLabelX, weightY);
+      currentCtx.fillText(`${Number(item.grossWeight).toFixed(3)}g`, coordinates.weightValueX, weightY);
       weightY += lineGap;
     }
 
     // Making charges and total amounts anchored to the top of the item block
     if (item.makingCharges) {
-      ctx.fillText(`Mkg Charges:`, coordinates.weightLabelX, weightY);
-      ctx.fillText(`₹${Number(item.makingCharges).toFixed(2)}`, coordinates.rateX, weightY);
+      currentCtx.fillText(`Mkg Charges:`, coordinates.weightLabelX, weightY);
+      currentCtx.fillText(`₹${Number(item.makingCharges).toFixed(2)}`, coordinates.rateX, weightY);
       weightY += lineGap;
     }
 
-    ctx.fillText(`₹${Number(item.amount).toFixed(2)}`, coordinates.amountX, y);
+    currentCtx.fillText(`₹${Number(item.amount).toFixed(2)}`, coordinates.amountX, y);
 
     // Advance currentY by the greater of default row height or used lines
-    const usedLines = Math.ceil((stoneLineY - y) / lineGap) + 1;
-    const usedHeight = usedLines * lineGap + 10;
+    const usedLines = Math.ceil((stoneLineY - y) / lineGap) + 2;
+    const usedHeight = usedLines * lineGap + 12;
     currentY += Math.max(coordinates.itemRowHeight, usedHeight);
+    itemsOnCurrentPage++;
   });
 
+  // Draw totals on last page only
+  const lastCtx = ctxArray[pageIndex];
+
   // Totals block: Total, Discount, Payable, Paid, Due
-  ctx.font = 'bold 18px Arial, sans-serif';
+  lastCtx.font = 'bold 16px Arial, sans-serif';
   let totalsY = coordinates.totalsBlock.y;
   const tLabelX = coordinates.totalsLabelX;
   const tValueX = coordinates.totalsValueX;
-  ctx.fillText(`Total`, tLabelX, totalsY);
-  ctx.fillText(`₹${Number(totalAmount).toFixed(2)}`, tValueX, totalsY);
-  totalsY += lineGap;
-  ctx.fillText(`Discount`, tLabelX, totalsY);
-  ctx.fillText(`₹${Number(discount || 0).toFixed(2)}`, tValueX, totalsY);
-  totalsY += lineGap;
-  ctx.fillText(`Payable`, tLabelX, totalsY);
-  ctx.fillText(`₹${Number(netPayable || 0).toFixed(2)}`, tValueX, totalsY);
-  totalsY += lineGap;
-  ctx.fillText(`Paid`, tLabelX, totalsY);
-  ctx.fillText(`₹${Number(amountPaid || 0).toFixed(2)}`, tValueX, totalsY);
-  totalsY += lineGap;
-  ctx.fillText(`Due`, tLabelX, totalsY);
-  ctx.fillText(`₹${Number(amountDue || 0).toFixed(2)}`, tValueX, totalsY);
+  lastCtx.fillText(`Total`, tLabelX, totalsY);
+  lastCtx.font = 'bold 24px Arial, sans-serif';
+  lastCtx.fillText(`₹${Number(totalAmount).toFixed(2)}`, tValueX, totalsY);
+  totalsY += lineGap+4;
+  lastCtx.font = 'bold 16px Arial, sans-serif';
 
-  // Convert canvas to image data
-  const imageData = canvas.toDataURL('image/png');
+  lastCtx.fillText(`Discount`, tLabelX, totalsY);
+  lastCtx.fillText(`₹${Number(discount || 0).toFixed(2)}`, tValueX, totalsY);
+  totalsY += lineGap+3;
+  lastCtx.font = 'bold 16px Arial, sans-serif';
 
-  // Create PDF using jsPDF
+  lastCtx.fillText(`Payable`, tLabelX, totalsY);
+  lastCtx.fillText(`₹${Number(netPayable || 0).toFixed(2)}`, tValueX, totalsY);
+  totalsY += lineGap+3;
+  lastCtx.font = 'bold 16px Arial, sans-serif';
+
+  lastCtx.fillText(`Paid`, tLabelX, totalsY);
+  lastCtx.fillText(`₹${Number(amountPaid || 0).toFixed(2)}`, tValueX, totalsY);
+  totalsY += lineGap+3;
+  lastCtx.font = 'bold 24px Arial, sans-serif';
+
+  lastCtx.fillText(`Due`, tLabelX, totalsY);
+  lastCtx.fillText(`₹${Number(amountDue || 0).toFixed(2)}`, tValueX, totalsY);
+
+  // Convert all pages to image data and create multi-page PDF
+  const imageDataArray = canvases.map(c => c.toDataURL('image/png'));
+
+  // Create PDF using jsPDF with multiple pages
   // Convert pixels to mm (1px ≈ 0.264583mm at 96 DPI)
   const pdfWidth = imgWidth * 0.264583;
   const pdfHeight = imgHeight * 0.264583;
@@ -213,12 +251,14 @@ export async function generateInvoicePDF(invoiceData, templateImageUrl) {
     format: [pdfWidth, pdfHeight]
   });
 
-  console.log(pdfWidth, pdfHeight);
-  console.log(imageData);
-  console.log(pdf);
-  console.log(pdf.output('blob'));
-  // Add image to PDF
-  pdf.addImage(imageData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+  // Add first page
+  pdf.addImage(imageDataArray[0], 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+  // Add remaining pages if any
+  for (let i = 1; i < imageDataArray.length; i++) {
+    pdf.addPage([pdfWidth, pdfHeight]);
+    pdf.addImage(imageDataArray[i], 'PNG', 0, 0, pdfWidth, pdfHeight);
+  }
 
   // Generate PDF blob
   const pdfBlob = pdf.output('blob');
