@@ -6,19 +6,19 @@ const coordinates = {
   date: { x: 970, y: 360 },
   customerName: { x: 170, y: 420 },
   phoneNumber: { x: 900, y: 420 },
-  goldRate: { x: 760, y: 540 },
-  itemStartY: 540,
+  goldRate: { x: 760, y: 520 },
+  itemStartY: 520,
   itemRowHeight: 70,
-  itemNameX: 300,
+  itemNameX: 270,
   // weights: label and value columns (keeps numbers aligned)
   weightLabelX: 490,
   weightValueX: 640,
   // stone weight values use same value column
-  stoneWeightX: 640,
+  stoneWeightX: 380,
   // rates column (gold rate, stone rate, making charges)
   rateX: 760,
   amountX: 950,
-  totalsBlock: { x: 880, y: 880 },
+  totalsBlock: { x: 880, y: 900 },
   totalsLabelX: 880,
   totalsValueX: 980
 };
@@ -107,7 +107,9 @@ export async function generateInvoicePDF(invoiceData, templateImageUrl) {
   let itemsOnCurrentPage = 0;
   let canvases = [canvas];
   let ctxArray = [ctx];
-
+  const y = currentY;
+  // Weight details: draw label in label column and numeric value in value column for alignment
+    let weightY = y + 2;
   items.forEach((item, itemIndex) => {
     // Check if we need a new page
     if (itemsOnCurrentPage >= maxItemsPerPage) {
@@ -128,15 +130,15 @@ export async function generateInvoicePDF(invoiceData, templateImageUrl) {
     }
 
     const currentCtx = ctxArray[pageIndex];
-    currentCtx.font = 'normal 16px Arial, sans-serif';
+    currentCtx.font = 'bold 16px Arial, sans-serif';
     const y = currentY;
 
     if (item.name) {
-      currentCtx.fillText(String(item.name), coordinates.itemNameX, y);
+      currentCtx.fillText(`${itemIndex+1}. ${String(item.name)}`, coordinates.itemNameX, weightY);
     }
 
-    // Weight details: draw label in label column and numeric value in value column for alignment
-    let weightY = y + 2;
+        currentCtx.font = 'normal 16px Arial, sans-serif';
+
 
     if (item.mainWeight !== undefined && item.mainWeight !== null && item.mainWeight !== '') {
       currentCtx.fillText(`Main Wt:`, coordinates.weightLabelX, weightY);
@@ -149,7 +151,7 @@ export async function generateInvoicePDF(invoiceData, templateImageUrl) {
     let stoneLineY = weightY;
     stones.forEach((stone, sidx) => {
       const stoneName = stone.name || `Stone${sidx + 1}`;
-      currentCtx.fillText(String(stoneName), coordinates.itemNameX + 20, stoneLineY);
+      currentCtx.fillText(String(stoneName), coordinates.itemNameX + 50, stoneLineY);
       if (stone.weight !== undefined && stone.weight !== null && stone.weight !== '') {
         currentCtx.fillText(`${Number(stone.weight).toFixed(3)}g`, coordinates.stoneWeightX, stoneLineY);
       }
@@ -193,7 +195,7 @@ export async function generateInvoicePDF(invoiceData, templateImageUrl) {
     if (item.makingCharges) {
       currentCtx.fillText(`Mkg Charges:`, coordinates.weightLabelX, weightY);
       currentCtx.fillText(`₹${Number(item.makingCharges).toFixed(2)}`, coordinates.rateX, weightY);
-      weightY += lineGap;
+      weightY += 2*lineGap;
     }
 
     currentCtx.fillText(`₹${Number(item.amount).toFixed(2)}`, coordinates.amountX, y);
@@ -216,18 +218,18 @@ export async function generateInvoicePDF(invoiceData, templateImageUrl) {
   lastCtx.fillText(`Total`, tLabelX, totalsY);
   lastCtx.font = 'bold 24px Arial, sans-serif';
   lastCtx.fillText(`₹${Number(totalAmount).toFixed(2)}`, tValueX, totalsY);
-  totalsY += lineGap+4;
-  lastCtx.font = 'bold 16px Arial, sans-serif';
+  totalsY += lineGap+6;
+  lastCtx.font = 'normal 16px Arial, sans-serif';
 
   lastCtx.fillText(`Discount`, tLabelX, totalsY);
   lastCtx.fillText(`₹${Number(discount || 0).toFixed(2)}`, tValueX, totalsY);
   totalsY += lineGap+3;
-  lastCtx.font = 'bold 16px Arial, sans-serif';
+  lastCtx.font = 'normal 16px Arial, sans-serif';
 
   lastCtx.fillText(`Payable`, tLabelX, totalsY);
   lastCtx.fillText(`₹${Number(netPayable || 0).toFixed(2)}`, tValueX, totalsY);
   totalsY += lineGap+3;
-  lastCtx.font = 'bold 16px Arial, sans-serif';
+  lastCtx.font = 'normal 16px Arial, sans-serif';
 
   lastCtx.fillText(`Paid`, tLabelX, totalsY);
   lastCtx.fillText(`₹${Number(amountPaid || 0).toFixed(2)}`, tValueX, totalsY);
