@@ -94,7 +94,7 @@ export async function generateInvoicePDF(invoiceData, templateImageUrl) {
 
   // Draw gold rate
   if (goldRate) {
-    ctx.font = 'normal 16px Arial, sans-serif';
+    ctx.font = 'bold 16px Arial, sans-serif';
     ctx.fillText(`₹${Number(goldRate).toFixed(2)}`, coordinates.goldRate.x, coordinates.goldRate.y);
   }
 
@@ -137,7 +137,6 @@ export async function generateInvoicePDF(invoiceData, templateImageUrl) {
       currentCtx.fillText(`${itemIndex+1}. ${String(item.name)}`, coordinates.itemNameX, weightY);
     }
 
-        currentCtx.font = 'normal 16px Arial, sans-serif';
 
 
     if (item.mainWeight !== undefined && item.mainWeight !== null && item.mainWeight !== '') {
