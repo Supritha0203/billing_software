@@ -18,7 +18,7 @@ const coordinates = {
   // rates column (gold rate, stone rate, making charges)
   rateX: 700,
   amountX: 850,
-  totalsBlock: { x: 780, y: 900 },
+  totalsBlock: { x: 780, y: 1100 },
   totalsLabelX: 725,
   totalsValueX: 860
 };
@@ -138,7 +138,7 @@ export async function generateInvoicePDF(invoiceData, templateImageUrl) {
     }
 
 
-
+    const itemAmountY = weightY+lineGap;
     if (item.mainWeight !== undefined && item.mainWeight !== null && item.mainWeight !== '') {
       currentCtx.fillText(`Main Wt:`, coordinates.weightLabelX, weightY);
       currentCtx.fillText(`${Number(item.mainWeight).toFixed(3)}g`, coordinates.weightValueX, weightY);
@@ -197,7 +197,7 @@ export async function generateInvoicePDF(invoiceData, templateImageUrl) {
       weightY += 2*lineGap;
     }
 
-    currentCtx.fillText(`₹${Number(item.amount).toFixed(2)}`, coordinates.amountX, y);
+    currentCtx.fillText(`₹${Number(item.amount).toFixed(2)}`, coordinates.amountX, itemAmountY);
 
     // Advance currentY by the greater of default row height or used lines
     const usedLines = Math.ceil((stoneLineY - y) / lineGap) + 2;
