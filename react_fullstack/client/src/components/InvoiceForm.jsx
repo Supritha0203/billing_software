@@ -76,6 +76,16 @@ function InvoiceForm() {
   // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target
+    
+    // Validate discount - should not exceed total amount
+    if (name === 'discount') {
+      const discountValue = toNumber(value)
+      if (discountValue > totalAmount) {
+        alert('Discount cannot exceed total amount')
+        return
+      }
+    }
+    
     setFormData(prev => ({ ...prev, [name]: value }))
     
     // Recalculate all item amounts when gold rate changes
@@ -262,7 +272,7 @@ function InvoiceForm() {
       }
 
       // Load template image from public folder
-      const templateImageUrl = '/invoice_template.png'
+      const templateImageUrl = '/invoice_template_2.jpeg'
       console.log(templateImageUrl);
       console.log("starting pdf generation");
       // Generate PDF in browser
@@ -510,6 +520,7 @@ function InvoiceForm() {
               placeholder="Discount amount"
               step="0.01"
               min="0"
+              max={totalAmount}
             />
           </div>
           <div className="total-box">
@@ -528,9 +539,13 @@ function InvoiceForm() {
               min="0"
             />
           </div>
-          <div className="total-box due-box">
-            <span className="total-label">Amount Due</span>
-            <span className="total-value">₹{amountDue.toFixed(2)}</span>
+          <div className={`total-box ${amountPaid > netPayable ? 'surplus-box' : 'due-box'}`}>
+            <span className="total-label">
+              {amountPaid > netPayable ? 'Surplus' : 'Amount Due'}
+            </span>
+            <span className="total-value">
+              ₹{Math.abs(netPayable - amountPaid).toFixed(2)}
+            </span>
           </div>
         </div>
         <div className="generate-row">

@@ -2,25 +2,25 @@ import jsPDF from 'jspdf';
 
 // Coordinates for text placement on the invoice template
 const coordinates = {
-  invoiceNumber: { x: 170, y: 370 },
-  date: { x: 970, y: 360 },
-  customerName: { x: 170, y: 420 },
-  phoneNumber: { x: 900, y: 420 },
-  goldRate: { x: 760, y: 520 },
+  invoiceNumber: { x: 100, y: 360 },
+  date: { x: 870, y: 350 },
+  customerName: { x: 100, y: 410 },
+  phoneNumber: { x: 800, y: 410 },
+  goldRate: { x: 700, y: 520 },
   itemStartY: 520,
   itemRowHeight: 70,
-  itemNameX: 270,
+  itemNameX: 220,
   // weights: label and value columns (keeps numbers aligned)
-  weightLabelX: 490,
-  weightValueX: 640,
+  weightLabelX: 390,
+  weightValueX: 560,
   // stone weight values use same value column
-  stoneWeightX: 380,
+  stoneWeightX: 280,
   // rates column (gold rate, stone rate, making charges)
-  rateX: 760,
-  amountX: 950,
-  totalsBlock: { x: 880, y: 900 },
-  totalsLabelX: 880,
-  totalsValueX: 980
+  rateX: 700,
+  amountX: 850,
+  totalsBlock: { x: 780, y: 900 },
+  totalsLabelX: 725,
+  totalsValueX: 860
 };
 
 /**
@@ -233,10 +233,15 @@ export async function generateInvoicePDF(invoiceData, templateImageUrl) {
   lastCtx.fillText(`Paid`, tLabelX, totalsY);
   lastCtx.fillText(`₹${Number(amountPaid || 0).toFixed(2)}`, tValueX, totalsY);
   totalsY += lineGap+3;
-  lastCtx.font = 'bold 24px Arial, sans-serif';
+  lastCtx.font = 'bold 20px Arial, sans-serif';
 
-  lastCtx.fillText(`Due`, tLabelX, totalsY);
-  lastCtx.fillText(`₹${Number(amountDue || 0).toFixed(2)}`, tValueX, totalsY);
+  // Determine if it's surplus or due
+  const isSurplus = amountPaid > netPayable;
+  const label = isSurplus ? 'Surplus' : 'Due';
+  const amount = Math.abs(netPayable - amountPaid);
+
+  lastCtx.fillText(label, tLabelX, totalsY);
+  lastCtx.fillText(`₹${Number(amount || 0).toFixed(2)}`, tValueX, totalsY);
 
   // Convert all pages to image data and create multi-page PDF
   const imageDataArray = canvases.map(c => c.toDataURL('image/png'));
