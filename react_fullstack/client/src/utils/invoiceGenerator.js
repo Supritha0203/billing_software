@@ -14,7 +14,7 @@ const coordinates = {
   weightLabelX: 390,
   weightValueX: 560,
   // stone weight values use same value column
-  stoneWeightX: 280,
+  stoneWeightX: 330,
   // rates column (gold rate, stone rate, making charges)
   rateX: 700,
   amountX: 850,
