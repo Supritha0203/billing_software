@@ -20,7 +20,8 @@ const coordinates = {
   amountX: 850,
   totalsBlock: { x: 780, y: 1100 },
   totalsLabelX: 725,
-  totalsValueX: 860
+  totalsValueX: 860,
+  description: { x: 50, y: 1150 }
 };
 
 /**
@@ -42,7 +43,8 @@ export async function generateInvoicePDF(invoiceData, templateImageUrl) {
     netPayable,
     amountPaid,
     amountDue,
-    vaAsWeight
+    vaAsWeight,
+    description
   } = invoiceData;
 
   console.log(invoiceData);
@@ -176,8 +178,7 @@ export async function generateInvoicePDF(invoiceData, templateImageUrl) {
     if (item.vaPercent !== undefined && item.vaPercent !== null && item.vaPercent !== '') {
       currentCtx.fillText(`VA:`, coordinates.weightLabelX, weightY);
       if (vaAsWeight) {
-        const vaGrams = (Number(item.netWeight) * Number(item.vaPercent)) / 100;
-        currentCtx.fillText(`${Number(vaGrams).toFixed(3)}g`, coordinates.weightValueX, weightY);
+        currentCtx.fillText(`${Number(item.vaPercent).toFixed(3)}g`, coordinates.weightValueX, weightY);
       } else {
         currentCtx.fillText(`${Number(item.vaPercent).toFixed(2)}%`, coordinates.weightValueX, weightY);
       }
@@ -242,6 +243,39 @@ export async function generateInvoicePDF(invoiceData, templateImageUrl) {
 
   lastCtx.fillText(label, tLabelX, totalsY);
   lastCtx.fillText(`₹${Number(amount || 0).toFixed(2)}`, tValueX, totalsY);
+
+  // Draw description/notes if present
+  if (description && description.trim()) {
+    const descX = coordinates.description.x;
+    let descY = coordinates.description.y;
+    lastCtx.font = 'bold 14px Arial, sans-serif';
+    lastCtx.fillText('Notes:', descX, descY);
+    descY += lineGap;
+    lastCtx.font = 'normal 12px Arial, sans-serif';
+    
+    // Handle multi-line text for left side with appropriate width
+    const maxWidth = 500; // Adjust width for left side display
+    const words = description.split(' ');
+    let line = '';
+    let noteY = descY;
+    
+    words.forEach(word => {
+      const testLine = line + (line ? ' ' : '') + word;
+      const metrics = lastCtx.measureText(testLine);
+      
+      if (metrics.width > maxWidth && line) {
+        lastCtx.fillText(line, descX, noteY);
+        line = word;
+        noteY += 16;
+      } else {
+        line = testLine;
+      }
+    });
+    
+    if (line) {
+      lastCtx.fillText(line, descX, noteY);
+    }
+  }
 
   // Convert all pages to image data and create multi-page PDF
   const imageDataArray = canvases.map(c => c.toDataURL('image/png'));

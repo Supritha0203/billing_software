@@ -10,7 +10,8 @@ function InvoiceForm() {
     invoiceNumber: '',
     discount: '',
     amountPaid: '',
-    vaAsWeight: false
+    vaAsWeight: false,
+    description: ''
   })
 
   const [items, setItems] = useState([
@@ -44,21 +45,21 @@ function InvoiceForm() {
     )
   }
 
-  const calculateWeights = (mainWeight, stones, vaPercent) => {
+  const calculateWeights = (mainWeight, stones, vaPercent, vaAsWeight = false) => {
     const main = toNumber(mainWeight)
     const { totalStoneWeight } = calculateStoneTotals(stones)
     const va = toNumber(vaPercent)
 
     const netWeight = Math.max(0, main - totalStoneWeight)
-    const grossWeight = netWeight * (1 + (va / 100))
+    const grossWeight = vaAsWeight ? (netWeight + va) : (netWeight * (1 + (va / 100)))
 
     return { netWeight, grossWeight }
   }
 
   // Calculate amount for an item (gross weight * gold rate)
-  const calculateItemAmount = (mainWeight, stones, vaPercent, makingCharges, goldRate) => {
+  const calculateItemAmount = (mainWeight, stones, vaPercent, makingCharges, goldRate, vaAsWeight = false) => {
     if (!mainWeight || !goldRate) return 0
-    const { grossWeight } = calculateWeights(mainWeight, stones, vaPercent)
+    const { grossWeight } = calculateWeights(mainWeight, stones, vaPercent, vaAsWeight)
     const { totalStoneRate } = calculateStoneTotals(stones)
     const goldComponent = grossWeight * toNumber(goldRate)
     const stoneComponent = totalStoneRate
@@ -99,7 +100,8 @@ function InvoiceForm() {
               item.stones || [],
               item.vaPercent,
               item.makingCharges,
-              value
+              value,
+              formData.vaAsWeight
             ).toFixed(2)
           )
         }))
@@ -126,7 +128,8 @@ function InvoiceForm() {
             stonesForCalc,
             vaForCalc,
             makingForCalc,
-            formData.goldRate
+            formData.goldRate,
+            formData.vaAsWeight
           )
           return { ...updatedItem, amount: parseFloat(amount.toFixed(2)) }
         }
@@ -160,7 +163,8 @@ function InvoiceForm() {
           updatedStones,
           item.vaPercent,
           item.makingCharges,
-          formData.goldRate
+          formData.goldRate,
+          formData.vaAsWeight
         )
         return {
           ...item,
@@ -183,7 +187,8 @@ function InvoiceForm() {
           updatedStones,
           item.vaPercent,
           item.makingCharges,
-          formData.goldRate
+          formData.goldRate,
+          formData.vaAsWeight
         )
         return {
           ...item,
@@ -204,7 +209,8 @@ function InvoiceForm() {
           updatedStones,
           item.vaPercent,
           item.makingCharges,
-          formData.goldRate
+          formData.goldRate,
+          formData.vaAsWeight
         )
         return {
           ...item,
@@ -246,6 +252,7 @@ function InvoiceForm() {
         phoneNumber: formData.phoneNumber,
         goldRate: parseFloat(formData.goldRate),
           vaAsWeight: !!formData.vaAsWeight,
+        description: formData.description,
         items: validItems.map(item => ({
           name: item.name,
           mainWeight: parseFloat(item.mainWeight),
@@ -254,7 +261,7 @@ function InvoiceForm() {
           stones: item.stones || [],
           ...(() => {
             const { totalStoneWeight, totalStoneRate } = calculateStoneTotals(item.stones || [])
-            const { netWeight, grossWeight } = calculateWeights(item.mainWeight, item.stones || [], item.vaPercent)
+            const { netWeight, grossWeight } = calculateWeights(item.mainWeight, item.stones || [], item.vaPercent, formData.vaAsWeight)
             return {
               totalStoneWeight,
               totalStoneRate,
@@ -361,12 +368,24 @@ function InvoiceForm() {
               <label>
                 <input
                   type="checkbox"
+                  style={{ padding: "1px" }}
                   checked={!!formData.vaAsWeight}
                   onChange={(e) => handleVaToggle(e.target.checked)}
-                /> Print V.A. as grams (instead of %)
+                /> &nbsp;Print V.A. as grams (instead of %)
               </label>
             </div>
           </div>
+        </div>
+        <div className="form-group full-width">
+          <label style={{ padding: "2px" }}>Description / Notes</label>
+          <textarea
+            name="description"
+            value={formData.description}
+            onChange={handleInputChange}
+            placeholder="e.g., Payment surplus, special instructions, or any additional notes"
+            rows="3"
+            className="description-textarea"
+          />
         </div>
       </div>
 
@@ -418,12 +437,12 @@ function InvoiceForm() {
                   />
                   <input
                     type="number"
-                    placeholder="V.A (%)"
+                    placeholder={formData.vaAsWeight ? "V.A (g)" : "V.A (%)"}
                     value={item.vaPercent}
                     onChange={(e) => handleItemChange(item.id, 'vaPercent', e.target.value)}
                     step="0.01"
                     min="0"
-                    max="100"
+                    {...(formData.vaAsWeight ? {} : { max: "1000000" })}
                     className="item-vaPercent"
                   />
                   <input
@@ -437,10 +456,10 @@ function InvoiceForm() {
                   />
 
                   <div className="item-netWeight">
-                    Net {calculateWeights(item.mainWeight, item.stones || [], item.vaPercent).netWeight.toFixed(3)} g
+                    Net {calculateWeights(item.mainWeight, item.stones || [], item.vaPercent, formData.vaAsWeight).netWeight.toFixed(3)} g
                   </div>
                   <div className="item-grossWeight">
-                    Gross {calculateWeights(item.mainWeight, item.stones || [], item.vaPercent).grossWeight.toFixed(3)} g
+                    Gross {calculateWeights(item.mainWeight, item.stones || [], item.vaPercent, formData.vaAsWeight).grossWeight.toFixed(3)} g
                   </div>
 
                   <button

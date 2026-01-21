@@ -130,6 +130,31 @@
   transform: translateY(-1px);
 }
 
+.description-textarea {
+  padding: 14px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: Arial, sans-serif;
+  transition: all 0.3s ease;
+  background: #fafafa;
+  resize: vertical;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.description-textarea:hover {
+  border-color: #c0c0c0;
+  background: white;
+}
+
+.description-textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
 .disabled-input {
   background-color: #f0f0f0;
   cursor: not-allowed;
