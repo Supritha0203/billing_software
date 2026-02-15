@@ -9,7 +9,7 @@ const coordinates = {
   goldRate: { x: 700, y: 520 },
   itemStartY: 520,
   itemRowHeight: 70,
-  itemNameX: 220,
+  itemNameX: 120,
   // weights: label and value columns (keeps numbers aligned)
   weightLabelX: 390,
   weightValueX: 560,
